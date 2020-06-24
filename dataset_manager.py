@@ -5,6 +5,10 @@ import cv2
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASETS_DIR = os.path.join(PARENT_DIR, "datasets")
 DATASET_INDEX_FILE = os.path.join(DATASETS_DIR, "dataset_index.dat")
+if not os.path.isdir(DATASETS_DIR):
+    os.mkdir(DATASETS_DIR)
+    with open(DATASET_INDEX_FILE, 'w') as _:
+        pass
 CURRENT_DIR = None
 
 def rename(newname):
