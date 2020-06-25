@@ -3,6 +3,7 @@ import os
 import shutil
 import cv2
 from dataset_manager.gui import FilePicker
+from dataset_manager.utilities import ExtractVideo, ReadInfoFile
 
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASETS_DIR = os.path.join(PARENT_DIR, "datasets")
@@ -22,12 +23,14 @@ def rename(newname):
 
 @rename("Print Dataset Index")
 def print_dataset_index():
-    print(5 * "-" + "Dataset Index" + 5 * "-")
+    print("-" * 32)
+    print("|{:^30}|".format("Dataset Index"))
+    print("-" * 32)
     with open(DATASET_INDEX_FILE, 'r') as index_file:
         lines = enumerate(index_file.read().splitlines(), start=1)
         for option, name in lines:
-            print("{}. {}".format(option, name))
-    print(24 * "-")
+            print("|{:>3}. {:<25}|".format(option, name))
+    print("-" * 32)
 
 @rename("Create New Dataset")
 def create_new_dataset():
@@ -46,6 +49,7 @@ def create_new_dataset():
 
             os.mkdir(dataset_dir)
             os.makedirs(dataset_dir + "/info")
+            os.makedirs(dataset_dir + "/temp")
             os.makedirs(dataset_dir + "/test/annotated")
             os.makedirs(dataset_dir + "/test/unannotated")
             os.makedirs(dataset_dir + "/train/annotated")
@@ -56,8 +60,6 @@ def create_new_dataset():
                 "videos_used": 0,
                 "total_frames" : 0,
                 "train_test_ratio" : 0.8,
-                "train_frames" : 0,
-                "test_frames" : 0,
                 "train_frames_annotated" : 0,
                 "train_frames_unannotated" : 0,
                 "test_frames_annotated" : 0,
@@ -105,7 +107,8 @@ def add_video():
     # randomize frames
     # move 80% to train
     # move 20% to test
-    print(FilePicker(head))
+    video_path = FilePicker(head)
+    ExtractVideo(video_path, CURRENT_DIR)
 
 @rename("Delete Video")
 def delete_video():
@@ -119,21 +122,42 @@ def add_annotated():
 def extract_batch():
     pass
 
+@rename("Go Back")
+def go_back():
+    pass
+
+@rename("Print Dataset Info")
+def print_dataset_info():
+    dataset_info = ReadInfoFile(CURRENT_DIR)
+    print("-" * 48)
+    print("|{:^30}|{:^15}|".format("Parameter", "Value"))
+    print("-" * 48)
+    for key, value in dataset_info.items():
+        print("|{:<30}|{:>15}|".format(key, value))
+    print("-" * 48)
+
 @rename("Open Dataset")
 def open_dataset():
+    global CURRENT_DIR
     dataset_name = input("Name of Dataset to open: ")
+    # Add directory checking if dataset exists
     CURRENT_DIR = os.path.join(DATASETS_DIR, dataset_name)
     menu = {
+        "0": go_back,
         "1": add_video,
         "2": delete_video,
         "3": add_annotated,
         "4": extract_batch,
+        "5": print_dataset_info,
     }
-    for key, value in menu.items():
-        print("{}. {}".format(key, value.__name__))
-    option = input("What do you want to do? > ")
-    if option in menu.keys():
-        menu[option]()
+    while True:
+        for key, value in menu.items():
+            print("{}. {}".format(key, value.__name__))
+        option = input("What do you want to do? > ")
+        if option == "0":
+            break
+        if option in menu.keys():
+            menu[option]()
     CURRENT_DIR = None
 
 def Quit():
