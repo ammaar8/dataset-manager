@@ -14,3 +14,10 @@ def FilePicker(directory):
 	filename = root.filename
 	root.destroy()
 	return filename
+
+def DirectoryPicker(directory):
+	root = Tk()
+	root.dirname =  filedialog.askdirectory(initialdir = directory)
+	dirname = root.dirname
+	root.destroy()
+	return dirname

@@ -70,7 +70,9 @@ def create_new_dataset():
                     dataset_info_file.write("{}={}\n".format(key, value))
             with open(dataset_dir + "/info/videos.dat", 'w') as _:
                 pass
-            with open(dataset_dir + "/info/out_for_annotation.dat", 'w') as _:
+            with open(dataset_dir + "/info/train_for_annotation.dat", 'w') as _:
+                pass
+            with open(dataset_dir + "/info/test_for_annotation.dat", 'w') as _:
                 pass
             with open(DATASET_INDEX_FILE, 'a') as index_file:
                 index_file.write(dataset_name + "\n")
@@ -114,7 +116,7 @@ def delete_video():
 
 @rename("Add Annotated")
 def add_annotated():
-    pass
+    MergeBatch(CURRENT_DIR)
 
 @rename("Extract Batch")
 def extract_batch():

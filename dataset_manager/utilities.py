@@ -89,16 +89,20 @@ def ExtractVideo(video_path, dataset_directory, train_test_ratio=0.8, extract_ra
     WriteVideoRecord(dataset_directory, video_name)
     print("Done Extracting")
 
-def AnnotationInfoFile(dataset_directory, mode, files=None):
+def AnnotationInfoFile(dataset_directory, mode, train_or_test=None, files=None):
     if mode == "add":
-        with open(os.path.join(dataset_directory, INFO_DIR, "out_for_annotation.dat"), 'a') as info_file:
+        with open(os.path.join(dataset_directory, INFO_DIR, "{}_for_annotation.dat".format(train_or_test)), 'a') as info_file:
             for file_name in files:
-                print("Working")
                 info_file.write(file_name + "\n")
             return None
     elif mode == "read":
-        with open(os.path.join(dataset_directory, INFO_DIR, "out_for_annotation.dat"), 'r') as info_file:
+        with open(os.path.join(dataset_directory, INFO_DIR, "{}_for_annotation.dat".format(train_or_test)), 'r') as info_file:
             return set(x.rstrip('\n') for x in info_file.readlines())
+    elif mode == "update":
+        with open(os.path.join(dataset_directory, INFO_DIR, "{}_for_annotation.dat".format(train_or_test)), 'w') as info_file:
+            for file_name in files:
+                info_file.write(file_name + "\n")
+            return None
     else:
         print("[ERROR] Unknown Option {}".format(mode))
 
@@ -117,10 +121,10 @@ def ExtractBatch(dataset_directory):
 
         source_dir = os.path.join(dataset_directory, train_or_test, "unannotated")
         all_files = set(map(GetFileName, glob.glob(os.path.join(source_dir, "*.jpg"))))
-        available_for_annotation =  list(all_files - AnnotationInfoFile(dataset_directory, "read"))
+        available_for_annotation =  list(all_files - AnnotationInfoFile(dataset_directory, "read", train_or_test))
         batch_files = list(map(GetFileName, available_for_annotation[0:min(len(available_for_annotation), batch_size)]))
         
-        AnnotationInfoFile(dataset_directory, "add", batch_files)
+        AnnotationInfoFile(dataset_directory, "add", train_or_test=train_or_test, files=batch_files)
         os.mkdir(destination_dir)
 
         for file_name in batch_files:
@@ -131,5 +135,53 @@ def ExtractBatch(dataset_directory):
     else:
         print("[ERROR] Invalid option {}".format(train_or_test))
 
-def MergeBatch():
-    pass
+def MergeBatch(dataset_directory):
+    # TODO Duplicate Handling
+    source_dir = DirectoryPicker("/")
+
+    # TODO get type [train/test]
+    train_or_test = input("Dataset type = [train/test] ")
+    if train_or_test not in ["train", "test"]:
+        print("[ERROR] Unknown dataset type : {}".format(train_or_test))
+        return None
+    
+    text_files = glob.glob(os.path.join(source_dir, "*.txt"))
+    text_files = [os.path.split(x)[1] for x in text_files]
+    text_files_names = [x.split('.')[0] for x in text_files]
+    
+    image_files = glob.glob(os.path.join(source_dir, "*.jpg"))
+    image_files = [os.path.split(x)[1] for x in image_files]
+    image_files_names = [x.split('.')[0] for x in text_files]
+
+    files_for_annotation = AnnotationInfoFile(dataset_directory, "read", train_or_test)
+    files_for_annotation_names = [x.split('.')[0] for x in files_for_annotation]
+    #print("[TXT]", text_files_names)
+    #print("[IMG]", image_files_names)
+    #print("[ANN]", files_for_annotation_names)
+    files_to_move = []
+    files_not_recognized = []
+    
+    for text_file in text_files_names:
+        if text_file in files_for_annotation_names:
+            files_to_move.append(text_file)
+        else:
+            files_not_recognized.append(text_file)
+
+    destination_dir = os.path.join(dataset_directory, train_or_test, ANNOTATED_DIR)
+    for file_to_move in files_to_move:
+        src_dir_txt = os.path.join(source_dir, file_to_move+".txt")
+        dest_dir_txt = os.path.join(destination_dir, file_to_move+".txt")
+        src_dir_img = os.path.join(dataset_directory, train_or_test, UNANNOTATED_DIR, file_to_move+".jpg")
+        dest_dir_img = os.path.join(destination_dir, file_to_move+".jpg")
+        shutil.copy(src_dir_txt, dest_dir_txt)
+        shutil.copy(src_dir_img, dest_dir_img)
+
+    files_left_for_annotation = [x for x in files_to_move if x not in files_for_annotation_names]
+    files_left_for_annotation = [x+".jpg" for x in files_left_for_annotation]
+    AnnotationInfoFile(dataset_directory, "update", train_or_test, files=files_left_for_annotation)
+    # TODO Update Database Info Annotated Count
+    dataset_info = ReadInfoFile(dataset_directory) 
+    dataset_info["{}_frames_annotated".format(train_or_test)] += len(files_to_move)
+    dataset_info["{}_frames_unannotated".format(train_or_test)] -= len(files_to_move)
+    WriteInfoFile(dataset_directory, dataset_info)
+    print("[INFO] All done")
