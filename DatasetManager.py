@@ -2,8 +2,8 @@
 import os
 import shutil
 import cv2
-from dataset_manager.gui import FilePicker
-from dataset_manager.utilities import ExtractVideo, ReadInfoFile
+from dataset_manager.gui import *
+from dataset_manager.utilities import *
 
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASETS_DIR = os.path.join(PARENT_DIR, "datasets")
@@ -70,6 +70,8 @@ def create_new_dataset():
                     dataset_info_file.write("{}={}\n".format(key, value))
             with open(dataset_dir + "/info/videos.dat", 'w') as _:
                 pass
+            with open(dataset_dir + "/info/out_for_annotation.dat", 'w') as _:
+                pass
             with open(DATASET_INDEX_FILE, 'a') as index_file:
                 index_file.write(dataset_name + "\n")
             print("Dataset {} created!".format(dataset_name))
@@ -102,12 +104,8 @@ def delete_dataset():
 @rename("Add Video")
 def add_video():
     head, tail = os.path.split(PARENT_DIR)
-    # Create temp folder
-    # extract frames
-    # randomize frames
-    # move 80% to train
-    # move 20% to test
     video_path = FilePicker(head)
+    # TODO - Add incorrect dir handling
     ExtractVideo(video_path, CURRENT_DIR)
 
 @rename("Delete Video")
@@ -120,7 +118,7 @@ def add_annotated():
 
 @rename("Extract Batch")
 def extract_batch():
-    pass
+    ExtractBatch(CURRENT_DIR)
 
 @rename("Go Back")
 def go_back():
@@ -140,25 +138,27 @@ def print_dataset_info():
 def open_dataset():
     global CURRENT_DIR
     dataset_name = input("Name of Dataset to open: ")
-    # Add directory checking if dataset exists
-    CURRENT_DIR = os.path.join(DATASETS_DIR, dataset_name)
-    menu = {
-        "0": go_back,
-        "1": add_video,
-        "2": delete_video,
-        "3": add_annotated,
-        "4": extract_batch,
-        "5": print_dataset_info,
-    }
-    while True:
-        for key, value in menu.items():
-            print("{}. {}".format(key, value.__name__))
-        option = input("What do you want to do? > ")
-        if option == "0":
-            break
-        if option in menu.keys():
-            menu[option]()
-    CURRENT_DIR = None
+    if os.path.isdir(os.path.join(DATASETS_DIR, dataset_name)):
+        CURRENT_DIR = os.path.join(DATASETS_DIR, dataset_name)
+        menu = {
+            "0": go_back,
+            "1": add_video,
+            "2": delete_video,
+            "3": add_annotated,
+            "4": extract_batch,
+            "5": print_dataset_info,
+        }
+        while True:
+            for key, value in menu.items():
+                print("{}. {}".format(key, value.__name__))
+            option = input("What do you want to do? > ")
+            if option == "0":
+                break
+            if option in menu.keys():
+                menu[option]()
+        CURRENT_DIR = None
+    else:
+        print("[ERROR]Database {} does not exist".format(dataset_name))
 
 def Quit():
     quit()
@@ -171,11 +171,14 @@ menu = {
     "5": Quit
     }
 
-while True:
-    print("Dataset Manager.")
-    for key, value in menu.items():
-        print("{}. {}".format(key, value.__name__))
-    option = input("What do you want to do? > ")
-    if option in menu.keys():
-        menu[option]()
+def main():
+    while True:
+        print("Dataset Manager.")
+        for key, value in menu.items():
+            print("{}. {}".format(key, value.__name__))
+        option = input("What do you want to do? > ")
+        if option in menu.keys():
+            menu[option]()
     
+if __name__ == "__main__":
+    main()
